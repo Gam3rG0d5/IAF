@@ -17,7 +17,7 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 bot.remove_command('help')
 
 # Path to the welcome video and clips directory
-WELCOME_VIDEO_PATH = "welcome_video.mp4"  # Ensure this file is in the repository
+WELCOME_VIDEO_PATH = "Edit on Indian Air force.mp4"  # Ensure this file is in the repository
 CLIPS_DIR = "clips"  # Directory to store user-uploaded clips
 
 # Create clips directory if it doesn't exist
@@ -30,6 +30,12 @@ def has_admin():
         admin_role = discord.utils.get(ctx.guild.roles, name="IAF Admin")
         return (ctx.author.guild_permissions.administrator or
                 (admin_role and admin_role in ctx.author.roles))
+    return commands.check(predicate)
+
+# Check if user is the server owner
+def is_owner():
+    async def predicate(ctx):
+        return ctx.author == ctx.guild.owner
     return commands.check(predicate)
 
 @bot.event
@@ -131,6 +137,33 @@ async def testwelcome(ctx):
         except discord.Forbidden:
             await ctx.send("Couldn't send the welcome message to your DMs. Please enable DMs from server members! 😕")
 
+@bot.command(description="Ban a user (admin only)")
+@has_admin()
+async def ban(ctx, user: discord.Member, *, reason: str = "No reason provided"):
+    if user == ctx.author:
+        await ctx.send("You can't ban yourself, silly! 😆")
+        return
+    await user.ban(reason=reason)
+    await ctx.send(f"{user.mention} has been banned! Reason: {reason} 🚫")
+
+@bot.command(description="Kick a user (admin only)")
+@has_admin()
+async def kick(ctx, user: discord.Member, *, reason: str = "No reason provided"):
+    if user == ctx.author:
+        await ctx.send("You can't kick yourself, silly! 😆")
+        return
+    await user.kick(reason=reason)
+    await ctx.send(f"{user.mention} has been kicked! Reason: {reason} 👢")
+
+@bot.command(description="Add an admin (owner only)")
+@is_owner()
+async def addadmin(ctx, user: discord.Member):
+    admin_role = discord.utils.get(ctx.guild.roles, name="IAF Admin")
+    if not admin_role:
+        admin_role = await ctx.guild.create_role(name="IAF Admin", permissions=discord.Permissions(administrator=True))
+    await user.add_roles(admin_role)
+    await ctx.send(f"{user.mention} is now an IAF Admin! 🛡️")
+
 @bot.command(description="Show this help message")
 async def help(ctx):
     help_message = (
@@ -138,6 +171,9 @@ async def help(ctx):
         "!clip <prompt> - Send a clip based on a prompt (e.g., '!clip launch')\n"
         "!addclip <prompt> - Add a new clip (admin only)\n"
         "!testwelcome - Test the welcome message (admin only)\n"
+        "!ban <user> [reason] - Ban a user (admin only)\n"
+        "!kick <user> [reason] - Kick a user (admin only)\n"
+        "!addadmin <user> - Add an admin (owner only)\n"
         "!help - Show this help message"
     )
     await ctx.send(help_message)
